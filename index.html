@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Student Performance Predictor</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #7c6af7;
+    --accent2: #e85d8a;
+    --pass: #22d3a0;
+    --fail: #ff5c7a;
+    --text: #e8e6f0;
+    --muted: #6b6880;
+    --card: #16161f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,247,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,247,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb1 { width: 600px; height: 600px; background: rgba(124,106,247,0.12); top: -200px; left: -200px; }
+  .orb2 { width: 500px; height: 500px; background: rgba(232,93,138,0.08); bottom: -150px; right: -150px; }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 3rem 2rem 2rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #fff 30%, var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 0.4rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem 2rem;
+  }
+
+  .tab-btn {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.6rem 1.6rem;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+
+  .tab-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .tab-btn.active {
+    background: linear-gradient(135deg, var(--accent), #9b87ff);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(124,106,247,0.35);
+  }
+
+  /* ── MAIN ── */
+  main {
+    position: relative;
+    z-index: 5;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeUp 0.3s ease; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── MODEL SELECTOR ── */
+  .model-selector {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .model-card {
+    flex: 1;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .model-card:hover { border-color: var(--accent); }
+
+  .model-card.selected {
+    border-color: var(--accent);
+    background: rgba(124,106,247,0.08);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .model-card .model-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .model-card .model-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .model-card .selected-dot {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: none;
+  }
+
+  .model-card.selected .selected-dot { display: block; }
+
+  /* ── FORM GRID ── */
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 1.8rem 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  label span {
+    color: var(--accent2);
+    margin-left: 2px;
+  }
+
+  input, select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.55rem 0.8rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(124,106,247,0.15);
+  }
+
+  select option { background: #1a1a26; }
+
+  /* ── SUBMIT BTN ── */
+  .submit-btn {
+    margin-top: 2rem;
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), #9b87ff);
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(124,106,247,0.3);
+  }
+
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(124,106,247,0.45);
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ── RESULT CARD ── */
+  .result-card {
+    margin-top: 2rem;
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .result-card.show { display: block; }
+
+  .result-verdict {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+  }
+
+  .result-verdict.pass { color: var(--pass); }
+  .result-verdict.fail { color: var(--fail); }
+
+  .prob-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 1.2rem;
+  }
+
+  .prob-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .prob-label { width: 90px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  .prob-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  .prob-bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .prob-bar-fill.pass { background: var(--pass); }
+  .prob-bar-fill.fail { background: var(--fail); }
+  .prob-value { width: 48px; text-align: right; font-family: 'DM Mono', monospace; font-size: 0.82rem; }
+
+  /* ── BATCH SECTION ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 3rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1.5rem;
+    background: var(--card);
+  }
+
+  .upload-zone:hover { border-color: var(--accent); background: rgba(124,106,247,0.04); }
+  .upload-zone.dragging { border-color: var(--accent); background: rgba(124,106,247,0.08); }
+
+  .upload-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+  .upload-text { color: var(--muted); font-size: 0.9rem; }
+  .upload-text strong { color: var(--text); }
+
+  #fileInput { display: none; }
+
+  .file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    background: rgba(124,106,247,0.15);
+    border: 1px solid var(--accent);
+    border-radius: 100px;
+    font-size: 0.82rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    margin-top: 0.8rem;
+  }
+
+  /* ── METRICS GRID ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (min-width: 600px) {
+    .metrics-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  .metric-tile {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem 1rem;
+    text-align: center;
+  }
+
+  .metric-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--accent);
+  }
+
+  .metric-name {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-top: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── CONFUSION MATRIX ── */
+  .cm-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .cm-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .cm-grid {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    grid-template-rows: auto 1fr 1fr;
+    gap: 6px;
+    max-width: 360px;
+  }
+
+  .cm-header {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 0.3rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .cm-cell {
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+  }
+
+  .cm-cell.tn { background: rgba(34,211,160,0.15); color: var(--pass); }
+  .cm-cell.fp { background: rgba(255,92,122,0.12); color: var(--fail); }
+  .cm-cell.fn { background: rgba(255,92,122,0.12); color: var(--fail); }
+  .cm-cell.tp { background: rgba(34,211,160,0.15); color: var(--pass); }
+  .cm-cell small { display: block; font-size: 0.65rem; font-family: 'DM Mono', monospace; color: var(--muted); font-weight: 400; }
+
+  .cm-row-header {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    padding-right: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── BATCH PREVIEW TABLE ── */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-top: 1rem;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: var(--surface2);
+    padding: 0.7rem 1rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-align: left;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  td {
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  tr:hover td { background: rgba(124,106,247,0.04); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+  }
+  .badge.pass { background: rgba(34,211,160,0.15); color: var(--pass); }
+  .badge.fail { background: rgba(255,92,122,0.15); color: var(--fail); }
+
+  /* ── SPINNER ── */
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 2rem; right: 2rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 1.2rem;
+    font-size: 0.85rem;
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s;
+    max-width: 300px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.error { border-color: var(--fail); color: var(--fail); }
+  .toast.success { border-color: var(--pass); color: var(--pass); }
+
+  /* ── CONFIG ── */
+  .api-config {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .api-config label { color: var(--muted); font-size: 0.8rem; font-family: 'DM Mono', monospace; white-space: nowrap; }
+  .api-config input { flex: 1; font-size: 0.82rem; }
+  .api-status { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background 0.3s; }
+  .api-status.ok { background: var(--pass); }
+  .api-status.err { background: var(--fail); }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎓</div>
+    <div>
+      <h1>Student Performance Predictor</h1>
+      <p class="subtitle">Regresión Logística · Red Neuronal · UCI Dataset</p>
+    </div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('individual')">🎯 Predicción Individual</button>
+  <button class="tab-btn" onclick="switchTab('batch')">📦 Predicción por Lotes</button>
+</div>
+
+<main>
+  <!-- ╔══════════════════════════════════════════╗ -->
+  <!-- ║       TAB 1 — PREDICCIÓN INDIVIDUAL      ║ -->
+  <!-- ╚══════════════════════════════════════════╝ -->
+  <div id="tab-individual" class="tab-panel active">
+
+    <!-- API URL -->
+    <div class="api-config">
+      <label>API URL</label>
+      <input type="text" id="apiUrl" value="https://TU-APP.onrender.com" placeholder="https://tu-backend.onrender.com"/>
+      <div class="api-status" id="apiStatus" title="Estado de la API"></div>
+    </div>
+
+    <!-- Selector de modelo -->
+    <div class="section-title">Modelo</div>
+    <div class="model-selector">
+      <div class="model-card selected" onclick="selectModel(this, 'logistic')">
+        <div class="selected-dot"></div>
+        <div class="model-name">📈 Regresión Logística</div>
+        <div class="model-desc">Lineal · Interpretable · Rápido</div>
+      </div>
+      <div class="model-card" onclick="selectModel(this, 'neural')">
+        <div class="selected-dot"></div>
+        <div class="model-name">🧠 Red Neuronal (MLP)</div>
+        <div class="model-desc">64→32→16 · ReLU · Adam</div>
+      </div>
+    </div>
+
+    <!-- FORMULARIO -->
+    <div class="section-title">Datos Personales</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Escuela <span>*</span></label>
+        <select id="school"><option value="GP">GP - Gabriel Pereira</option><option value="MS">MS - Mousinho da Silveira</option></select>
+      </div>
+      <div class="field">
+        <label>Sexo <span>*</span></label>
+        <select id="sex"><option value="F">Femenino</option><option value="M">Masculino</option></select>
+      </div>
+      <div class="field">
+        <label>Edad <span>*</span></label>
+        <input type="number" id="age" value="17" min="15" max="22"/>
+      </div>
+      <div class="field">
+        <label>Dirección <span>*</span></label>
+        <select id="address"><option value="U">Urbana</option><option value="R">Rural</option></select>
+      </div>
+      <div class="field">
+        <label>Tamaño familiar <span>*</span></label>
+        <select id="famsize"><option value="GT3">Más de 3 (GT3)</option><option value="LE3">3 o menos (LE3)</option></select>
+      </div>
+      <div class="field">
+        <label>Estado padres <span>*</span></label>
+        <select id="Pstatus"><option value="T">Juntos (T)</option><option value="A">Separados (A)</option></select>
+      </div>
+    </div>
+
+    <div class="section-title">Educación Familiar</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Edu. madre (0–4) <span>*</span></label>
+        <input type="number" id="Medu" value="2" min="0" max="4"/>
+      </div>
+      <div class="field">
+        <label>Edu. padre (0–4) <span>*</span></label>
+        <input type="number" id="Fedu" value="2" min="0" max="4"/>
+      </div>
+      <div class="field">
+        <label>Trabajo madre <span>*</span></label>
+        <select id="Mjob"><option value="at_home">En casa</option><option value="health">Salud</option><option value="services">Servicios</option><option value="teacher">Docente</option><option value="other">Otro</option></select>
+      </div>
+      <div class="field">
+        <label>Trabajo padre <span>*</span></label>
+        <select id="Fjob"><option value="at_home">En casa</option><option value="health">Salud</option><option value="services">Servicios</option><option value="teacher">Docente</option><option value="other">Otro</option></select>
+      </div>
+      <div class="field">
+        <label>Razón de escuela <span>*</span></label>
+        <select id="reason"><option value="course">Curso</option><option value="home">Cercanía</option><option value="reputation">Reputación</option><option value="other">Otro</option></select>
+      </div>
+      <div class="field">
+        <label>Acudiente <span>*</span></label>
+        <select id="guardian"><option value="mother">Madre</option><option value="father">Padre</option><option value="other">Otro</option></select>
+      </div>
+    </div>
+
+    <div class="section-title">Hábitos Académicos</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Tiempo viaje (1–4) <span>*</span></label>
+        <input type="number" id="traveltime" value="1" min="1" max="4"/>
+      </div>
+      <div class="field">
+        <label>Tiempo estudio (1–4) <span>*</span></label>
+        <input type="number" id="studytime" value="2" min="1" max="4"/>
+      </div>
+      <div class="field">
+        <label>Fallas previas (0–4) <span>*</span></label>
+        <input type="number" id="failures" value="0" min="0" max="4"/>
+      </div>
+      <div class="field">
+        <label>Ausencias (0–93) <span>*</span></label>
+        <input type="number" id="absences" value="2" min="0" max="93"/>
+      </div>
+      <div class="field">
+        <label>Apoyo escolar <span>*</span></label>
+        <select id="schoolsup"><option value="no">No</option><option value="yes">Sí</option></select>
+      </div>
+      <div class="field">
+        <label>Apoyo familiar <span>*</span></label>
+        <select id="famsup"><option value="yes">Sí</option><option value="no">No</option></select>
+      </div>
+      <div class="field">
+        <label>Clases pagas <span>*</span></label>
+        <select id="paid"><option value="no">No</option><option value="yes">Sí</option></select>
+      </div>
+      <div class="field">
+        <label>Actividades extra <span>*</span></label>
+        <select id="activities"><option value="yes">Sí</option><option value="no">No</option></select>
+      </div>
+      <div class="field">
+        <label>Jardín infancia <span>*</span></label>
+        <select id="nursery"><option value="yes">Sí</option><option value="no">No</option></select>
+      </div>
+      <div class="field">
+        <label>Quiere estudiar más <span>*</span></label>
+        <select id="higher"><option value="yes">Sí</option><option value="no">No</option></select>
+      </div>
+      <div class="field">
+        <label>Internet en casa <span>*</span></label>
+        <select id="internet"><option value="yes">Sí</option><option value="no">No</option></select>
+      </div>
+      <div class="field">
+        <label>Relación romántica <span>*</span></label>
+        <select id="romantic"><option value="no">No</option><option value="yes">Sí</option></select>
+      </div>
+    </div>
+
+    <div class="section-title">Estilo de Vida</div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Relac. familiar (1–5) <span>*</span></label>
+        <input type="number" id="famrel" value="4" min="1" max="5"/>
+      </div>
+      <div class="field">
+        <label>Tiempo libre (1–5) <span>*</span></label>
+        <input type="number" id="freetime" value="3" min="1" max="5"/>
+      </div>
+      <div class="field">
+        <label>Salidas (1–5) <span>*</span></label>
+        <input type="number" id="goout" value="2" min="1" max="5"/>
+      </div>
+      <div class="field">
+        <label>Alcohol laboral (1–5) <span>*</span></label>
+        <input type="number" id="Dalc" value="1" min="1" max="5"/>
+      </div>
+      <div class="field">
+        <label>Alcohol fin de semana (1–5) <span>*</span></label>
+        <input type="number" id="Walc" value="1" min="1" max="5"/>
+      </div>
+      <div class="field">
+        <label>Salud (1–5) <span>*</span></label>
+        <input type="number" id="health" value="4" min="1" max="5"/>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="predictBtn" onclick="predictIndividual()">
+      Predecir Resultado
+    </button>
+
+    <!-- Resultado -->
+    <div class="result-card" id="resultCard">
+      <div class="result-verdict" id="resultVerdict"></div>
+      <div id="resultModel" style="color:var(--muted);font-size:0.8rem;font-family:'DM Mono',monospace;margin-top:0.3rem;"></div>
+      <div class="prob-bars">
+        <div class="prob-row">
+          <span class="prob-label">Aprobado</span>
+          <div class="prob-bar-wrap"><div class="prob-bar-fill pass" id="barPass" style="width:0%"></div></div>
+          <span class="prob-value" id="probPassVal">—</span>
+        </div>
+        <div class="prob-row">
+          <span class="prob-label">Reprobado</span>
+          <div class="prob-bar-wrap"><div class="prob-bar-fill fail" id="barFail" style="width:0%"></div></div>
+          <span class="prob-value" id="probFailVal">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ╔══════════════════════════════════════════╗ -->
+  <!-- ║       TAB 2 — PREDICCIÓN POR LOTES       ║ -->
+  <!-- ╚══════════════════════════════════════════╝ -->
+  <div id="tab-batch" class="tab-panel">
+
+    <!-- Selector modelo -->
+    <div class="section-title">Modelo</div>
+    <div class="model-selector">
+      <div class="model-card selected" onclick="selectBatchModel(this, 'logistic')">
+        <div class="selected-dot"></div>
+        <div class="model-name">📈 Regresión Logística</div>
+        <div class="model-desc">Lineal · Interpretable · Rápido</div>
+      </div>
+      <div class="model-card" onclick="selectBatchModel(this, 'neural')">
+        <div class="selected-dot"></div>
+        <div class="model-name">🧠 Red Neuronal (MLP)</div>
+        <div class="model-desc">64→32→16 · ReLU · Adam</div>
+      </div>
+    </div>
+
+    <!-- Upload zone -->
+    <div class="section-title">Subir Archivo CSV</div>
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📂</div>
+      <div class="upload-text">
+        <strong>Haz clic para subir</strong> o arrastra tu CSV aquí<br>
+        <small style="color:var(--muted)">Debe tener las mismas columnas que student-mat.csv (separado por ;)</small>
+      </div>
+      <div id="fileChip" class="file-chip" style="display:none;">
+        📄 <span id="fileName">—</span>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept=".csv" onchange="handleFile(event)"/>
+
+    <button class="submit-btn" id="batchBtn" onclick="predictBatch()">
+      Predecir por Lotes
+    </button>
+
+    <!-- Resultados batch -->
+    <div id="batchResults" style="display:none; margin-top:2rem; animation: fadeUp 0.4s ease;">
+
+      <!-- Métricas -->
+      <div class="section-title">Métricas de Desempeño</div>
+      <div class="metrics-grid">
+        <div class="metric-tile">
+          <div class="metric-value" id="mAccuracy">—</div>
+          <div class="metric-name">Accuracy</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-value" id="mPrecision">—</div>
+          <div class="metric-name">Precision</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-value" id="mRecall">—</div>
+          <div class="metric-name">Recall</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-value" id="mF1">—</div>
+          <div class="metric-name">F1-Score</div>
+        </div>
+      </div>
+
+      <!-- Matriz de confusión -->
+      <div class="section-title">Matriz de Confusión</div>
+      <div class="cm-wrap">
+        <div class="cm-title">Predicho →</div>
+        <div class="cm-grid">
+          <!-- row 0: headers -->
+          <div></div>
+          <div class="cm-header">Reprobado</div>
+          <div class="cm-header">Aprobado</div>
+          <!-- row 1 -->
+          <div class="cm-row-header">Real: Rep.</div>
+          <div class="cm-cell tn" id="cmTN">—<small>TN</small></div>
+          <div class="cm-cell fp" id="cmFP">—<small>FP</small></div>
+          <!-- row 2 -->
+          <div class="cm-row-header">Real: Apr.</div>
+          <div class="cm-cell fn" id="cmFN">—<small>FN</small></div>
+          <div class="cm-cell tp" id="cmTP">—<small>TP</small></div>
+        </div>
+      </div>
+
+      <!-- Tabla preview -->
+      <div class="section-title">Detalle de Predicciones</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Predicción</th>
+              <th>Prob. Aprobado</th>
+              <th>Real (si hay G3)</th>
+            </tr>
+          </thead>
+          <tbody id="batchTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Estado ────────────────────────────────────────────────────────────────────
+let selectedModel = 'logistic';
+let selectedBatchModel = 'logistic';
+let selectedFile = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getApiUrl() {
+  return document.getElementById('apiUrl').value.replace(/\/$/, '');
+}
+
+function showToast(msg, type = 'error') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+function setApiStatus(ok) {
+  const el = document.getElementById('apiStatus');
+  el.className = `api-status ${ok ? 'ok' : 'err'}`;
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── Model selectors ───────────────────────────────────────────────────────────
+function selectModel(el, name) {
+  document.querySelectorAll('#tab-individual .model-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedModel = name;
+}
+
+function selectBatchModel(el, name) {
+  document.querySelectorAll('#tab-batch .model-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedBatchModel = name;
+}
+
+// ── Gather form data ──────────────────────────────────────────────────────────
+function getFormData() {
+  const fields = [
+    'school','sex','age','address','famsize','Pstatus',
+    'Medu','Fedu','Mjob','Fjob','reason','guardian',
+    'traveltime','studytime','failures','schoolsup','famsup',
+    'paid','activities','nursery','higher','internet','romantic',
+    'famrel','freetime','goout','Dalc','Walc','health','absences'
+  ];
+  const data = {};
+  for (const f of fields) {
+    const el = document.getElementById(f);
+    data[f] = isNaN(el.value) || el.tagName === 'SELECT' ? el.value : Number(el.value);
+  }
+  return data;
+}
+
+// ── Predicción individual ─────────────────────────────────────────────────────
+async function predictIndividual() {
+  const btn = document.getElementById('predictBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Prediciendo...';
+
+  try {
+    const res = await fetch(`${getApiUrl()}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: selectedModel, data: getFormData() })
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    setApiStatus(true);
+
+    // Mostrar resultado
+    const card = document.getElementById('resultCard');
+    const verdict = document.getElementById('resultVerdict');
+    const isPass = data.prediction === 1;
+
+    verdict.textContent = isPass ? '✅ Aprobado' : '❌ Reprobado';
+    verdict.className = `result-verdict ${isPass ? 'pass' : 'fail'}`;
+
+    document.getElementById('resultModel').textContent =
+      `Modelo: ${selectedModel === 'logistic' ? 'Regresión Logística' : 'Red Neuronal'} · ` +
+      `Confianza: ${Math.max(data.probability_pass, data.probability_fail).toFixed(1)}%`;
+
+    // Barras
+    setTimeout(() => {
+      document.getElementById('barPass').style.width = data.probability_pass + '%';
+      document.getElementById('barFail').style.width = data.probability_fail + '%';
+    }, 50);
+    document.getElementById('probPassVal').textContent = data.probability_pass.toFixed(1) + '%';
+    document.getElementById('probFailVal').textContent = data.probability_fail.toFixed(1) + '%';
+
+    card.classList.add('show');
+    showToast('Predicción completada', 'success');
+
+  } catch (e) {
+    setApiStatus(false);
+    showToast('❌ Error al conectar con la API. Verifica la URL.');
+    console.error(e);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Predecir Resultado';
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+function handleFile(event) {
+  selectedFile = event.target.files[0];
+  if (!selectedFile) return;
+  document.getElementById('fileName').textContent = selectedFile.name;
+  document.getElementById('fileChip').style.display = 'inline-flex';
+}
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragging'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragging');
+  selectedFile = e.dataTransfer.files[0];
+  if (selectedFile) {
+    document.getElementById('fileName').textContent = selectedFile.name;
+    document.getElementById('fileChip').style.display = 'inline-flex';
+  }
+});
+
+// ── Predicción por lotes ──────────────────────────────────────────────────────
+async function predictBatch() {
+  if (!selectedFile) { showToast('Por favor sube un archivo CSV primero.'); return; }
+
+  const btn = document.getElementById('batchBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Procesando...';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('model', selectedBatchModel);
+
+    const res = await fetch(`${getApiUrl()}/batch`, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    setApiStatus(true);
+
+    // Mostrar métricas
+    if (data.metrics) {
+      document.getElementById('mAccuracy').textContent  = (data.metrics.accuracy  * 100).toFixed(1) + '%';
+      document.getElementById('mPrecision').textContent = (data.metrics.precision * 100).toFixed(1) + '%';
+      document.getElementById('mRecall').textContent    = (data.metrics.recall    * 100).toFixed(1) + '%';
+      document.getElementById('mF1').textContent        = (data.metrics.f1        * 100).toFixed(1) + '%';
+    }
+
+    // Matriz de confusión
+    if (data.confusion_matrix) {
+      const [[tn, fp],[fn, tp]] = data.confusion_matrix;
+      document.getElementById('cmTN').innerHTML = `${tn}<small>TN</small>`;
+      document.getElementById('cmFP').innerHTML = `${fp}<small>FP</small>`;
+      document.getElementById('cmFN').innerHTML = `${fn}<small>FN</small>`;
+      document.getElementById('cmTP').innerHTML = `${tp}<small>TP</small>`;
+    }
+
+    // Tabla de predicciones (max 50 filas)
+    const tbody = document.getElementById('batchTableBody');
+    tbody.innerHTML = '';
+    const max = Math.min(data.predictions.length, 50);
+    for (let i = 0; i < max; i++) {
+      const pred  = data.predictions[i];
+      const prob  = data.probabilities[i];
+      const real  = data.y_true ? data.y_true[i] : null;
+      const isPass = pred === 1;
+      tbody.innerHTML += `
+        <tr>
+          <td style="color:var(--muted);font-family:'DM Mono',monospace;">${i + 1}</td>
+          <td><span class="badge ${isPass ? 'pass' : 'fail'}">${isPass ? 'Aprobado' : 'Reprobado'}</span></td>
+          <td style="font-family:'DM Mono',monospace;">${prob.toFixed(1)}%</td>
+          <td>${real !== null
+            ? `<span class="badge ${real === 1 ? 'pass' : 'fail'}">${real === 1 ? 'Aprobado' : 'Reprobado'}</span>`
+            : '<span style="color:var(--muted)">—</span>'}</td>
+        </tr>`;
+    }
+
+    if (data.predictions.length > 50) {
+      tbody.innerHTML += `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem;">
+        … y ${data.predictions.length - 50} filas más</td></tr>`;
+    }
+
+    document.getElementById('batchResults').style.display = 'block';
+    showToast(`✅ ${data.total} predicciones completadas`, 'success');
+
+  } catch (e) {
+    setApiStatus(false);
+    showToast('❌ Error al conectar con la API. Verifica la URL y el archivo.');
+    console.error(e);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Predecir por Lotes';
+}
+
+// ── Ping API al cargar ────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  try {
+    const res = await fetch(`${getApiUrl()}/`, { signal: AbortSignal.timeout(4000) });
+    setApiStatus(res.ok);
+  } catch { setApiStatus(false); }
+});
+</script>
+</body>
+</html>
